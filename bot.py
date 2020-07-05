@@ -38,6 +38,7 @@ markdown = """
         """
 users = []
 reg = Registration()
+reroll_request = []
 
 
 @bot.message_handler(commands=['start', 'help'])
@@ -101,7 +102,121 @@ def game_start(message):
             bot.send_message(message.chat.id, 'Сначала начните регистрацию командой /reg_start')
 
 
+@bot.message_handler(commands=['reroll'])
+def reroll_something(message):
+    global reroll_request
+    reroll_exists = False
+    for reroll in reroll_request:
+        try:
+            if message.chat.id in reroll:
+                reroll[message.chat.id] = True
+                reroll_exists = True
+                break
+        except KeyError:
+            pass
+    if not reroll_exists:
+        reroll_request.insert(len(reroll_request), {message.chat.id:True})
+    reroll_markup = telebot.types.ReplyKeyboardMarkup(row_width=3)
+    person = telebot.types.KeyboardButton('Персонаж')
+    gender = telebot.types.KeyboardButton('Пол, возраст, чайлдфри')
+    profession = telebot.types.KeyboardButton('Профессия')
+    health = telebot.types.KeyboardButton('Состояние здоровья')
+    phobia = telebot.types.KeyboardButton('Фобия')
+    hobby = telebot.types.KeyboardButton('Хобби')
+    character = telebot.types.KeyboardButton('Характер')
+    info = telebot.types.KeyboardButton('Доп. информация')
+    baggage = telebot.types.KeyboardButton('Багаж')
+    reroll_markup.add(person, gender, profession, health, phobia, hobby, character, info, baggage)
+    bot.send_message(message.chat.id, 'Нажмите на клавиатуре на тот параметр, который хотите переролить.', parse_mode = 'html', reply_markup = reroll_markup)
+
+
+@bot.message_handler(content_types=['text'])
+def on_message(message):
+    global reroll_request
+    reroll_needed = False
+    for reroll in reroll_request:
+        try:
+            if reroll[message.chat.id]:
+                reroll_needed = True
+                reroll[message.chat.id] = False
+                break
+        except KeyError:
+            pass
+    if reroll_needed:
+        remove_keyboard = telebot.types.ReplyKeyboardRemove()
+        bot.send_message(message.chat.id, 'Изменения отправлены в личные сообщения!', markdown,
+                         parse_mode="Markdown", reply_markup=remove_keyboard)
+        if message.text == 'Персонаж':
+            user_profession = startCards.professions[random.randrange(0, len(startCards.professions))]['value']
+            user_gender = startCards.gender[random.randrange(0, len(startCards.gender))]['value']
+            user_age = random.randrange(14, 95)
+            if user_gender == 'Женщина' and user_age > 49 or user_gender == 'Мужчина' and user_age > 60:
+                user_childfree = 'Чайлдфри'
+            else:
+                user_childfree = startCards.childfree[random.randrange(0, len(startCards.childfree))]['value']
+            user_health = startCards.health[random.randrange(0, len(startCards.health))]['value']
+            user_phobia = startCards.phobias[random.randrange(0, len(startCards.phobias))]['value']
+            user_hobby = startCards.hobbies[random.randrange(0, len(startCards.hobbies))]['value']
+            user_character = startCards.character[random.randrange(0, len(startCards.character))]['value']
+            user_baggage = startCards.baggage[random.randrange(0, len(startCards.baggage))]['value']
+            user_info = startCards.info[random.randrange(0, len(startCards.info))]['value']
+
+            bot.send_message(message.from_user.id, f'*Ваш новый персонаж:*\n'
+                                                   f'*Пол, возраст, чайлдфри:* {user_gender}. Возраст: {user_age} лет(года). {user_childfree}\n'
+                                                          f'*Профессия*: {user_profession}\n'
+                                                          f'*Состояние здоровья*: {user_health}\n'
+                                                          f'*Фобия*: {user_phobia}\n'
+                                                          f'*Хобби*: {user_hobby}\n'
+                                                          f'*Характер*: {user_character}\n'
+                                                          f'*Доп.информация*: {user_info}\n'
+                                                          f'*Багаж*: {user_baggage}\n', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Пол, возраст, чайлдфри':
+            user_gender = startCards.gender[random.randrange(0, len(startCards.gender))]['value']
+            user_age = random.randrange(14, 95)
+            if user_gender == 'Женщина' and user_age > 49 or user_gender == 'Мужчина' and user_age > 60:
+                user_childfree = 'Чайлдфри'
+            else:
+                user_childfree = startCards.childfree[random.randrange(0, len(startCards.childfree))]['value']
+            bot.send_message(message.from_user.id, f'*Ваш измененный пол, возраст и статус чайлдфри:\n*'
+                                                   f'*Пол, возраст, чайлдфри:* {user_gender}. Возраст: {user_age} лет(года). {user_childfree}\n', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Профессия':
+            user_profession = startCards.professions[random.randrange(0, len(startCards.professions))]['value']
+            bot.send_message(message.from_user.id, f'*Ваша измененная профессия*:\n'
+                                                   f'*Профессия*: {user_profession}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Состояние здоровья':
+            user_health = startCards.health[random.randrange(0, len(startCards.health))]['value']
+            bot.send_message(message.from_user.id, f'*Ваше измененное состояние здоровья*:\n'
+                                                   f'*Состояние здоровья*: {user_health}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Фобия':
+            user_phobia = startCards.phobias[random.randrange(0, len(startCards.phobias))]['value']
+            bot.send_message(message.from_user.id, f'*Ваша измененная фобия*:\n'
+                                                   f'*Фобия*: {user_phobia}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Хобби':
+            user_hobby = startCards.hobbies[random.randrange(0, len(startCards.hobbies))]['value']
+            bot.send_message(message.from_user.id, f'*Ваше изменённое хобби*:\n'
+                                                   f'*Хобби*: {user_hobby}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Характер':
+            user_character = startCards.character[random.randrange(0, len(startCards.character))]['value']
+            bot.send_message(message.from_user.id, f'*Ваш измененный характер*:\n'
+                                                   f'*Характер*: {user_character}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Доп. информация':
+            user_info = startCards.info[random.randrange(0, len(startCards.info))]['value']
+            bot.send_message(message.from_user.id, f'*Ваша измененная доп.информация*:\n'
+                                                   f'*Доп.информация*: {user_info}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        elif message.text == 'Багаж':
+            user_baggage = startCards.baggage[random.randrange(0, len(startCards.baggage))]['value']
+            bot.send_message(message.from_user.id, f'*Ваш измененный багаж*:\n'
+                                                   f'*Багаж*: {user_baggage}', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+        else:
+            bot.message.send(message.chat.id, 'Этот параметр не входит в число изменяемых!', markdown, parse_mode="Markdown", reply_markup=remove_keyboard)
+
+
+
+
+
+
 # Блок с регистрацией
+
 
 @bot.message_handler(commands=['reg_start'])
 def registration_start(message):
