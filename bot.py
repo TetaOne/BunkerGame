@@ -6,16 +6,29 @@ import random
 
 
 class Registration:
-    registration = False
+    started_in_chats = []
 
-    def start(self):
-        self.registration = True
+    def start(self, chat_id):
+        in_list = False
+        for status in self.started_in_chats:
+            if chat_id in status:
+                in_list = True
+                status[chat_id] = True
+        if not in_list:
+            self.started_in_chats.insert(len(self.started_in_chats), {chat_id: True})
 
-    def stop(self):
-        self.registration = False
+    def stop(self, chat_id):
+        for status in self.started_in_chats:
+            if chat_id in status:
+                status[chat_id] = False
 
-    def status(self):
-        return self.registration
+    def status(self, chat_id):
+        try:
+            for status in self.started_in_chats:
+                if chat_id in status:
+                    return status[chat_id]
+        except IndexError or KeyError:
+            return False
 
 
 bot = telebot.TeleBot(config.token)
@@ -27,14 +40,14 @@ users = []
 reg = Registration()
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'help'])
 def handle_start_help(message):
-    bot.send_message(message.chat.id, 'Привет, я бот для игры в бункер. Что бы поиграть, ')
+    bot.send_message(message.chat.id, 'Привет, я бот для игры в бункер. \nЧто бы поиграть, добавь бота в чат и введи команду /reg_start для регистрации и /reg_end или /game_start для начала игры.\n Для отмены регистрации можешь ввести /reg_cancel ')
 
 
-@bot.message_handler(commands=['game_start'])
+@bot.message_handler(commands=['game_start', 'reg_end'])
 def game_start(message):
-    if reg.status():
+    if reg.status(message.chat.id):
         actual_description = conditions.description[random.randrange(0, len(conditions.description))]['value']
         actual_duration = conditions.duration[random.randrange(0, len(conditions.duration))]['value']
         actual_survivors = conditions.survivors[random.randrange(0, len(conditions.survivors))]['value']
@@ -47,35 +60,37 @@ def game_start(message):
                                           f'*Площадь бункера*: {actual_area}\n'
                                           f'*Дополнительно*: {actual_first_stock}, {actual_second_stock}',
                          markdown, parse_mode="Markdown")
-        reg.stop()
-        for user in users:
-            for user_id in user:
-                user_first_action = startCards.actions[random.randrange(0, len(startCards.actions))]['value']
-                user_second_action = startCards.actions[random.randrange(0, len(startCards.actions))]['value']
-                user_profession = startCards.professions[random.randrange(0, len(startCards.professions))]['value']
-                user_gender = startCards.gender[random.randrange(0, len(startCards.gender))]['value']
-                user_age = random.randrange(14, 95)
-                user_health = startCards.health[random.randrange(0, len(startCards.health))]['value']
-                user_phobia = startCards.phobias[random.randrange(0, len(startCards.phobias))]['value']
-                user_hobby = startCards.hobbies[random.randrange(0, len(startCards.hobbies))]['value']
-                user_character = startCards.character[random.randrange(0, len(startCards.character))]['value']
-                user_baggage = startCards.baggage[random.randrange(0, len(startCards.baggage))]['value']
-                if user_gender == 'Женщина' and user_age > 49 or user_gender == 'Мужчина' and user_age > 60:
-                    user_childfree = 'Чайлдфри'
-                else:
-                    user_childfree = startCards.childfree[random.randrange(0, len(startCards.childfree))]['value']
-                user_info = startCards.info[random.randrange(0, len(startCards.info))]['value']
-                bot.send_message(user_id, f'*Пол, возраст, чайлдфри:* {user_gender}. Возраст: {user_age} лет(года). {user_childfree}\n'
-                                                  f'*Профессия*: {user_profession}\n'
-                                                  f'*Состояние здоровья*: {user_health}\n'
-                                                  f'*Фобия*: {user_phobia}\n'
-                                                  f'*Хобби*: {user_hobby}\n'
-                                                  f'*Характер*: {user_character}\n'
-                                                  f'*Доп.информация*: {user_info}\n'
-                                                  f'*Багаж*: {user_baggage}\n'
-                                                  f'*Карта действий №1*: {user_first_action}\n'
-                                                  f'*Карта действий №2*: {user_second_action}\n',
-                                 markdown, parse_mode="Markdown")
+        reg.stop(message.chat.id)
+        for user_chat in users:
+            for chat_id in user_chat:
+                for user_id in user_chat[chat_id]:
+                    user_first_action = startCards.actions[random.randrange(0, len(startCards.actions))]['value']
+                    user_second_action = startCards.actions[random.randrange(0, len(startCards.actions))]['value']
+                    user_profession = startCards.professions[random.randrange(0, len(startCards.professions))]['value']
+                    user_gender = startCards.gender[random.randrange(0, len(startCards.gender))]['value']
+                    user_age = random.randrange(14, 95)
+                    user_health = startCards.health[random.randrange(0, len(startCards.health))]['value']
+                    user_phobia = startCards.phobias[random.randrange(0, len(startCards.phobias))]['value']
+                    user_hobby = startCards.hobbies[random.randrange(0, len(startCards.hobbies))]['value']
+                    user_character = startCards.character[random.randrange(0, len(startCards.character))]['value']
+                    user_baggage = startCards.baggage[random.randrange(0, len(startCards.baggage))]['value']
+                    if user_gender == 'Женщина' and user_age > 49 or user_gender == 'Мужчина' and user_age > 60:
+                        user_childfree = 'Чайлдфри'
+                    else:
+                        user_childfree = startCards.childfree[random.randrange(0, len(startCards.childfree))]['value']
+                    user_info = startCards.info[random.randrange(0, len(startCards.info))]['value']
+                    bot.send_message(user_id, f'Ваши данные для игры в чате: *{message.chat.title}*\n'
+                                              f'*Пол, возраст, чайлдфри:* {user_gender}. Возраст: {user_age} лет(года). {user_childfree}\n'
+                                                      f'*Профессия*: {user_profession}\n'
+                                                      f'*Состояние здоровья*: {user_health}\n'
+                                                      f'*Фобия*: {user_phobia}\n'
+                                                      f'*Хобби*: {user_hobby}\n'
+                                                      f'*Характер*: {user_character}\n'
+                                                      f'*Доп.информация*: {user_info}\n'
+                                                      f'*Багаж*: {user_baggage}\n'
+                                                      f'*Карта действий №1*: {user_first_action}\n'
+                                                      f'*Карта действий №2*: {user_second_action}\n',
+                                     markdown, parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, 'Сначала начните регистрацию командой /reg_start')
 
@@ -84,9 +99,13 @@ def game_start(message):
 
 @bot.message_handler(commands=['reg_start'])
 def registration_start(message):
-    if not reg.status():
-        reg.start()
-        users.clear()
+    if not reg.status(message.chat.id):
+        reg.start(message.chat.id)
+        for user_chat in users:
+            try:
+                del user_chat[message.chat.id]
+            except KeyError:
+                pass
         reg_keyboard = telebot.types.InlineKeyboardMarkup()
         reg_button = telebot.types.InlineKeyboardButton(text="Регестрироваться", callback_data='user_info')
         reg_keyboard.add(reg_button)
@@ -100,8 +119,12 @@ def registration_start(message):
 def registration_cancel(message):
     global users
     global reg
-    users.clear()
-    reg.stop()
+    for user_chat in users:
+        try:
+            del user_chat[message.chat.id]
+        except KeyError:
+            pass
+    reg.stop(message.chat.id)
     bot.send_message(message.chat.id, "Регистрация завершена, начинайте новую командой /reg_start")
 
 
@@ -112,20 +135,24 @@ def callback_inline(call):
     global users
     if call.message:
         in_users = False
-        for user in users:
-            for key in user:
-                if user[key] == call.from_user.username:
-                    in_users = True
-                    break
+        for user_chat in users:
+            for chat_id in user_chat:
+                if chat_id == call.message.chat.id:
+                    for user_id in user_chat[chat_id]:
+                        if user_chat[chat_id][user_id] == call.from_user.username:
+                            in_users = True
+                            break
         if call.data == "user_info" and not in_users:
             try:
                 bot.send_message(call.from_user.id, 'Вы успешно зарегестрированы в игру "Бункер"')
-                users.insert(len(users), {call.from_user.id: call.from_user.username})
+                users.insert(len(users), {call.message.chat.id:{call.from_user.id: call.from_user.username}})
                 reg_keyboard = telebot.types.InlineKeyboardMarkup()
                 actual_users = ''
-                for user in users:
-                    for key in user:
-                        actual_users += user[key] + '\n'
+                for user_chat in users:
+                    for chat_id in user_chat:
+                        if chat_id == call.message.chat.id:
+                            for user_id in user_chat[chat_id]:
+                                actual_users += user_chat[chat_id][user_id] + '\n'
                 reg_button = telebot.types.InlineKeyboardButton(text="Регестрироваться", callback_data='user_info')
                 reg_keyboard.add(reg_button)
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
